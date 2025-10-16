@@ -12,6 +12,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b3850553b2362764497891106bed579c, type: 3}
   m_Name: New Card Data 1
   m_EditorClassIdentifier: 
-  cardName: 
-  artwork: {fileID: 0}
+  cardName: test
+  artwork: {fileID: 21300000, guid: 0648cbc613083ae499efe3357cc1b29f, type: 3}
   power: 0
