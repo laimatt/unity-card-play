@@ -41,6 +41,10 @@ public class CardContainer : MonoBehaviour {
     [Header("Events")]
     [SerializeField]
     private EventsConfig eventsConfig;
+
+    [Header("Spawning")]
+    [SerializeField]
+    private GameObject cardPrefab;
     
     private List<CardWrapper> cards = new();
 
@@ -80,6 +84,10 @@ public class CardContainer : MonoBehaviour {
     }
 
     void Update() {
+        UpdateCards();
+    }
+
+    public void PublicUpdate() {
         UpdateCards();
     }
 
@@ -231,6 +239,48 @@ public class CardContainer : MonoBehaviour {
         cards.Remove(card);
         eventsConfig.OnCardDestroy?.Invoke(new CardDestroy(card));
         Destroy(card.gameObject);
+    }
+
+    // --- Runtime spawning helpers ---
+    // Instantiates a card prefab as a child of this container, initializes CardWrapper and layout.
+    public CardWrapper SpawnCard() {
+        if (cardPrefab == null) {
+            Debug.LogError("CardContainer: cardPrefab is null. Assign a card prefab in the inspector.");
+            return null;
+        }
+
+        var go = Instantiate(cardPrefab, transform);
+        // Ensure RectTransform and required UI components are preserved by using SetParent with worldPositionStays=false
+        go.transform.SetParent(transform, false);
+
+        var wrapper = go.GetComponent<CardWrapper>();
+        if (wrapper == null) {
+            wrapper = go.AddComponent<CardWrapper>();
+        }
+
+        // Pass configuration expected by CardContainer
+        wrapper.zoomConfig = zoomConfig;
+        wrapper.animationSpeedConfig = animationSpeedConfig;
+        wrapper.eventsConfig = eventsConfig;
+        wrapper.preventCardInteraction = preventCardInteraction;
+        wrapper.container = this;
+
+        // Add to internal list and refresh layout
+        cards.Add(wrapper);
+        InitCards();
+
+        return wrapper;
+    }
+
+    // Spawn multiple cards
+    public List<CardWrapper> SpawnCards(int count) {
+        var spawned = new List<CardWrapper>();
+        for (int i = 0; i < count; i++) {
+            var c = SpawnCard();
+            if (c != null) spawned.Add(c);
+        }
+
+        return spawned;
     }
 
     private bool IsCursorInPlayArea() {
