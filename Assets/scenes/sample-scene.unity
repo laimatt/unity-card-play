@@ -3183,8 +3183,22 @@ MonoBehaviour:
   - {fileID: 21300000, guid: e02376528c7e7fb44989f3795f93e625, type: 3}
   - {fileID: 21300000, guid: 77c753245ba6a95418d15a67c3bc09e6, type: 3}
   - {fileID: 21300000, guid: 43c27ef9ef226914893a1679d62e385b, type: 3}
+  powerIcons:
+  - {fileID: 21300000, guid: 436f8066a31717641929f6cc74f95495, type: 3}
+  - {fileID: 21300000, guid: e7462c3960658744db775611f25d47f0, type: 3}
+  - {fileID: 21300000, guid: 330dd13894afedf43bbed74c3f3aa647, type: 3}
+  - {fileID: 21300000, guid: 3bf1f15ff6ac70d4fb2734fb06e41370, type: 3}
+  - {fileID: 21300000, guid: abf61a3818b924346b535204bddbfaf5, type: 3}
+  - {fileID: 21300000, guid: 463f770060eb1e344a448de7e950706b, type: 3}
+  - {fileID: 21300000, guid: a98b082d09c96314489d44e41b76749d, type: 3}
+  - {fileID: 21300000, guid: e4f2d281a667477419bd8907feb54816, type: 3}
+  - {fileID: 21300000, guid: fe93afc40cc540d489b4b81ea68c9744, type: 3}
+  elementIcons:
+  - {fileID: 21300000, guid: 8085dd45e892b4a4397d7d82173c46f4, type: 3}
+  - {fileID: 21300000, guid: 54d5db7fc73eb2a44ac4612af21e3ce6, type: 3}
+  - {fileID: 21300000, guid: c9dc60c67245fd54886278ac65674bcb, type: 3}
   dealOnStart: 1
-  handSizeOnStart: 5
+  handSizeOnStart: 9
 --- !u!1 &2063683051
 GameObject:
   m_ObjectHideFlags: 0
