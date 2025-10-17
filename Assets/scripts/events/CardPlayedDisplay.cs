@@ -22,7 +22,7 @@ public class CardPlayedDisplay : MonoBehaviour {
         var cardName = evt?.card?.gameObject?.name ?? "Card";
         messageText.text = $"Played: {cardName}";
 
-        Debug.LogWarning($"CardPlayedDisplay: {cardName}");
+        // Debug.LogWarning($"CardPlayedDisplay: {cardName}");
         StopAllCoroutines();
         StartCoroutine(HideAfterDelay());
 

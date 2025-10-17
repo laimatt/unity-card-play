@@ -23,8 +23,8 @@ public class PlayAudio : MonoBehaviour {
         var cardName = evt?.card?.gameObject?.name ?? "bido";
         // messageText.clip = cardName;
 
-        AudioClip clip = Resources.Load<AudioClip>(cardName);
-        Debug.LogWarning($"PlayAudio: {cardName} ");
+        AudioClip clip = Resources.Load<AudioClip>($"Sounds/{cardName}");
+        // Debug.LogWarning($"PlayAudio: {cardName} ");
 
         soundEffectAudioSource.clip = clip;
 
