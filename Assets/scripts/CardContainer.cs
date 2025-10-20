@@ -46,6 +46,26 @@ public class CardContainer : MonoBehaviour {
     [SerializeField]
     private GameObject cardPrefab;
     
+    [Header("Anchors")]
+    [SerializeField]
+    private Vector2 childAnchorMin = new Vector2(0f, 0.5f);
+
+    [SerializeField]
+    private Vector2 childAnchorMax = new Vector2(0f, 0.5f);
+    
+    [Header("Spacing")]
+    [Tooltip("Extra horizontal spacing (in world units) added between cards when not forcing fit to container.")]
+    [SerializeField]
+    private float interCardSpacing = 0f;
+
+    [Tooltip("Minimum spacing (in world units) between cards when forceFitContainer is enabled. The distributor will use at least this much spacing when fitting to the container.")]
+    [SerializeField]
+    private float minSpacingWhenFitting = 0f;
+
+    [Tooltip("When enabled, spacing values are interpreted as center-to-center distance between cards instead of edge-to-edge gap.")]
+    [SerializeField]
+    private bool useCenterToCenterSpacing = false;
+    
     private List<CardWrapper> cards = new();
 
     private RectTransform rectTransform;
@@ -180,23 +200,97 @@ public class CardContainer : MonoBehaviour {
     private void DistributeChildrenToFitContainer(float childrenTotalWidth) {
         // Get the width of the container
         var width = rectTransform.rect.width * transform.lossyScale.x;
-        // Get the distance between each child
-        var distanceBetweenChildren = (width - childrenTotalWidth) / (cards.Count - 1);
-        // Set all children's positions to be evenly spaced out
-        var currentX = transform.position.x - width / 2;
-        foreach (CardWrapper child in cards) {
-            var adjustedChildWidth = child.width * child.transform.lossyScale.x;
-            child.targetPosition = new Vector2(currentX + adjustedChildWidth / 2, transform.position.y);
-            currentX += adjustedChildWidth + distanceBetweenChildren;
+        // Get the distance between each child (handle single-card case)
+        var slots = Mathf.Max(1, cards.Count - 1);
+        if (useCenterToCenterSpacing) {
+            // Compute available span between the first and last possible centers
+            var leftEdge = transform.position.x - width / 2;
+            var rightEdge = transform.position.x + width / 2;
+            var firstHalf = cards[0].width * cards[0].transform.lossyScale.x / 2f;
+            var lastHalf = cards[cards.Count - 1].width * cards[cards.Count - 1].transform.lossyScale.x / 2f;
+            var firstPossibleCenter = leftEdge + firstHalf;
+            var lastPossibleCenter = rightEdge - lastHalf;
+            var maxAvailableSpan = lastPossibleCenter - firstPossibleCenter;
+            var desiredCenterSpacing = maxAvailableSpan / (float)slots;
+            var centerSpacing = Mathf.Max(desiredCenterSpacing, minSpacingWhenFitting);
+            var totalSpan = centerSpacing * slots;
+
+            // Choose starting center based on alignment so spacing increase doesn't push layout off-center
+            float firstCenter;
+            switch (alignment) {
+                case CardAlignment.Left:
+                    firstCenter = firstPossibleCenter;
+                    break;
+                case CardAlignment.Center:
+                    firstCenter = transform.position.x - totalSpan / 2f;
+                    break;
+                case CardAlignment.Right:
+                    firstCenter = lastPossibleCenter - totalSpan;
+                    break;
+                default:
+                    firstCenter = firstPossibleCenter;
+                    break;
+            }
+
+            var currentCenter = firstCenter;
+            foreach (CardWrapper child in cards) {
+                child.targetPosition = new Vector2(currentCenter, transform.position.y);
+                currentCenter += centerSpacing;
+            }
+        }
+        else {
+            var distanceBetweenChildren = (width - childrenTotalWidth) / (float)slots;
+            // Ensure we respect a minimum spacing if user configured one
+            distanceBetweenChildren = Mathf.Max(distanceBetweenChildren, minSpacingWhenFitting);
+            // Set all children's positions to be evenly spaced out
+            var currentX = transform.position.x - width / 2;
+            foreach (CardWrapper child in cards) {
+                var adjustedChildWidth = child.width * child.transform.lossyScale.x;
+                child.targetPosition = new Vector2(currentX + adjustedChildWidth / 2, transform.position.y);
+                currentX += adjustedChildWidth + distanceBetweenChildren;
+            }
         }
     }
 
     private void DistributeChildrenWithoutOverlap(float childrenTotalWidth) {
-        var currentPosition = GetAnchorPositionByAlignment(childrenTotalWidth);
-        foreach (CardWrapper child in cards) {
-            var adjustedChildWidth = child.width * child.transform.lossyScale.x;
-            child.targetPosition = new Vector2(currentPosition + adjustedChildWidth / 2, transform.position.y);
-            currentPosition += adjustedChildWidth;
+        if (useCenterToCenterSpacing) {
+            // Compute total center span and starting center depending on alignment
+            var totalSpan = interCardSpacing * (cards.Count - 1);
+            var containerWidthInGlobalSpace = rectTransform.rect.width * transform.lossyScale.x;
+            float firstCenter;
+            switch (alignment) {
+                case CardAlignment.Left:
+                    var leftEdge = transform.position.x - containerWidthInGlobalSpace / 2;
+                    firstCenter = leftEdge + (cards[0].width * cards[0].transform.lossyScale.x) / 2f;
+                    break;
+                case CardAlignment.Center:
+                    firstCenter = transform.position.x - totalSpan / 2f;
+                    break;
+                case CardAlignment.Right:
+                    var rightEdge = transform.position.x + containerWidthInGlobalSpace / 2;
+                    var lastHalf = (cards[cards.Count - 1].width * cards[cards.Count - 1].transform.lossyScale.x) / 2f;
+                    var lastCenter = rightEdge - lastHalf;
+                    firstCenter = lastCenter - totalSpan;
+                    break;
+                default:
+                    firstCenter = GetAnchorPositionByAlignment(childrenTotalWidth);
+                    break;
+            }
+
+            var currentCenter = firstCenter;
+            foreach (CardWrapper child in cards) {
+                child.targetPosition = new Vector2(currentCenter, transform.position.y);
+                currentCenter += interCardSpacing;
+            }
+        }
+        else {
+            var currentPosition = GetAnchorPositionByAlignment(childrenTotalWidth);
+            foreach (CardWrapper child in cards) {
+                var adjustedChildWidth = child.width * child.transform.lossyScale.x;
+                child.targetPosition = new Vector2(currentPosition + adjustedChildWidth / 2, transform.position.y);
+                // Move current position by the child's width plus any configured extra spacing
+                currentPosition += adjustedChildWidth + interCardSpacing;
+            }
         }
     }
 
@@ -216,7 +310,7 @@ public class CardContainer : MonoBehaviour {
 
     private void SetCardsAnchor() {
         foreach (CardWrapper child in cards) {
-            child.SetAnchor(new Vector2(0, 0.5f), new Vector2(0, 0.5f));
+            child.SetAnchor(childAnchorMin, childAnchorMax);
         }
     }
 
