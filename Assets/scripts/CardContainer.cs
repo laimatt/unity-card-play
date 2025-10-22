@@ -40,7 +40,7 @@ public class CardContainer : MonoBehaviour {
     
     [Header("Events")]
     [SerializeField]
-    private EventsConfig eventsConfig;
+    public EventsConfig eventsConfig;
 
     [Header("Spawning")]
     [SerializeField]
@@ -109,6 +109,10 @@ public class CardContainer : MonoBehaviour {
 
     public void PublicUpdate() {
         UpdateCards();
+    }
+
+    public bool isCardPlayed() {
+        return cardPlayConfig.cardPlayed;
     }
 
     void SetUpCards() {
@@ -320,10 +324,52 @@ public class CardContainer : MonoBehaviour {
 
     public void OnCardDragEnd() {
         // If card is in play area, play it!
-        if (IsCursorInPlayArea()) {
+        if (!cardPlayConfig.cardPlayed && IsCursorInPlayArea()) {
             eventsConfig?.OnCardPlayed?.Invoke(new CardPlayed(currentDraggedCard));
+
+            Debug.LogWarning("CardContainer: card played");
+
+            var playArea = cardPlayConfig.playArea;
+            // Compute play area center in world space (if playArea exists)
+            Vector3 playCenterWorld = Vector3.zero;
+            if (playArea != null) {
+                var playAreaCorners = new Vector3[4];
+                playArea.GetWorldCorners(playAreaCorners);
+                playCenterWorld = new Vector3((playAreaCorners[0].x + playAreaCorners[2].x) / 2f,
+                    (playAreaCorners[0].y + playAreaCorners[2].y) / 2f,
+                    playAreaCorners[0].z);
+            }
+
             if (cardPlayConfig.destroyOnPlay) {
                 DestroyCard(currentDraggedCard);
+            }
+            else {
+                // Lock the card into the center of the play area (or leave in place if no playArea set)
+                var card = currentDraggedCard;
+                // Remove from layout management so container won't reposition it
+                if (cards.Contains(card)) cards.Remove(card);
+                // Disable further interaction and clear its container reference
+                card.preventCardInteraction = true;
+                card.container = null;
+
+                if (playArea != null) {
+                    // Parent under the play area so it renders in that UI space
+                    card.transform.SetParent(playArea, true);
+                    // Place at center immediately
+                    var rect = card.GetComponent<RectTransform>();
+                    if (rect != null) {
+                        rect.position = playCenterWorld;
+                        card.targetPosition = playCenterWorld;
+                        card.targetRotation = 0;
+                        card.targetVerticalDisplacement = 0;
+                        card.uiLayer = 1;
+                    }
+                    else {
+                        card.transform.position = playCenterWorld;
+                    }
+                }
+                cardPlayConfig.cardPlayed = true;
+
             }
         }
         currentDraggedCard = null;

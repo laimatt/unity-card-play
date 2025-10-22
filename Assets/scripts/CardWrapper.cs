@@ -54,7 +54,8 @@ public class CardWrapper : MonoBehaviour, IPointerEnterHandler, IPointerExitHand
         if (!isDragged) {
             var target = new Vector2(targetPosition.x, targetPosition.y + targetVerticalDisplacement);
             if (isHovered && zoomConfig.overrideYPosition != -1) {
-                target = new Vector2(target.x, zoomConfig.overrideYPosition);
+                target = new Vector2(target.x, target.y);
+                // target = new Vector2(target.x, zoomConfig.overrideYPosition);
             }
 
             var distance = Vector2.Distance(rectTransform.position, target);
@@ -117,8 +118,12 @@ public class CardWrapper : MonoBehaviour, IPointerEnterHandler, IPointerExitHand
             canvas.sortingOrder = zoomConfig.zoomedSortOrder;
         }
 
-        eventsConfig?.OnCardHover?.Invoke(new CardHover(this));
+        if (preventCardInteraction == false) {
+            eventsConfig?.OnCardHover?.Invoke(new CardHover(this));
+        }
         isHovered = true;
+        // eventsConfig?.OnCardHover?.Invoke(new CardHover(this));
+        // isHovered = true;
     }
 
     public void OnPointerExit(PointerEventData eventData) {
@@ -141,6 +146,7 @@ public class CardWrapper : MonoBehaviour, IPointerEnterHandler, IPointerExitHand
     }
 
     public void OnPointerUp(PointerEventData eventData) {
+        if (preventCardInteraction) return;
         isDragged = false;
         container.OnCardDragEnd();
     }

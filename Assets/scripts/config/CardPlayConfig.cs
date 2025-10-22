@@ -10,5 +10,8 @@ namespace config {
         [SerializeField]
         public bool destroyOnPlay;
 
+        [SerializeField]
+        public bool cardPlayed;
+
     }
 }
