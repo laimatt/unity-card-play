@@ -5,8 +5,8 @@ using TMPro;
 public class CardView : MonoBehaviour {
     [SerializeField] private TMP_Text titleText;
     [SerializeField] private Image artworkImage;
-    [SerializeField] private int powerValue;
-    [SerializeField] private int elementValue;
+    [SerializeField] public int powerValue;
+    [SerializeField] public int elementValue;
     [SerializeField] private Image powerImage;
     [SerializeField] private Image elementImage;
 

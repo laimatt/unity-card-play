@@ -18,7 +18,7 @@ public class DeckManager : MonoBehaviour {
 
     [Header("Deal")]
     [SerializeField] private bool dealOnStart = true;
-    [SerializeField] private int handSizeOnStart = 5;
+    [SerializeField] private int handSizeOnStart = 9;
 
     // Spawn a single card from a sprite and optional title
     public void SpawnCard(Sprite artwork, string title = null, int power = 0, int element = 0) {

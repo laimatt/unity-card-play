@@ -115,6 +115,10 @@ public class CardContainer : MonoBehaviour {
         return cardPlayConfig.cardPlayed;
     }
 
+    public void setCardPlayed(bool played) {
+        cardPlayConfig.cardPlayed = played;
+    }
+
     void SetUpCards() {
         cards.Clear();
         foreach (Transform card in transform) {
@@ -193,7 +197,8 @@ public class CardContainer : MonoBehaviour {
         var cardsTotalWidth = cards.Sum(card => card.width * card.transform.lossyScale.x);
         // Compute the width of the container in global space
         var containerWidth = rectTransform.rect.width * transform.lossyScale.x;
-        if (forceFitContainer && cardsTotalWidth > containerWidth) {
+        // if (forceFitContainer && cardsTotalWidth > containerWidth) {
+        if (cards.Count > 1) {
             DistributeChildrenToFitContainer(cardsTotalWidth);
         }
         else {
@@ -325,9 +330,8 @@ public class CardContainer : MonoBehaviour {
     public void OnCardDragEnd() {
         // If card is in play area, play it!
         if (!cardPlayConfig.cardPlayed && IsCursorInPlayArea()) {
-            eventsConfig?.OnCardPlayed?.Invoke(new CardPlayed(currentDraggedCard));
-
             Debug.LogWarning("CardContainer: card played");
+            eventsConfig?.OnCardPlayed?.Invoke(new CardPlayed(currentDraggedCard));
 
             var playArea = cardPlayConfig.playArea;
             // Compute play area center in world space (if playArea exists)
