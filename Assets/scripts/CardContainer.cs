@@ -440,4 +440,10 @@ public class CardContainer : MonoBehaviour {
                cursorPosition.y < playAreaCorners[2].y;
         
     }
+
+    public void SpawnCard(CardWrapper card) {
+        Debug.LogWarning("DiscardContainer: card added to discard!");
+        cards.Add(card);
+        // CardContainer detects new children in its Update() and will re-init layout on next frame.
+    }
 }
