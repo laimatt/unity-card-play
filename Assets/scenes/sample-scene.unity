@@ -38,7 +38,7 @@ RenderSettings:
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 0}
-  m_IndirectSpecularColor: {r: 0.18028378, g: 0.22571412, b: 0.30692285, a: 1}
+  m_IndirectSpecularColor: {r: 0.18028352, g: 0.22571376, b: 0.3069224, a: 1}
   m_UseRadianceAmbientProbe: 0
 --- !u!157 &3
 LightmapSettings:
@@ -586,6 +586,7 @@ GameObject:
   m_Component:
   - component: {fileID: 282529436}
   - component: {fileID: 282529435}
+  - component: {fileID: 282529437}
   m_Layer: 5
   m_Name: card-container_enemy
   m_TagString: Untagged
@@ -608,6 +609,7 @@ MonoBehaviour:
   forceFitContainer: 1
   preventCardInteraction: 0
   alignment: 1
+  layoutDirection: 0
   allowCardRepositioning: 1
   maxCardRotation: 15
   maxHeightDisplacement: 40
@@ -727,6 +729,22 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: -200}
   m_SizeDelta: {x: 800, y: 100}
   m_Pivot: {x: 0.5, y: 0}
+--- !u!114 &282529437
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 282529434}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7bc165031c87edf4793563abf12a93cd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  aiContainer: {fileID: 282529435}
+  opponentContainer: {fileID: 305458008}
+  boardContainer: {fileID: 1888763486}
+  playDelay: 0.75
 --- !u!1 &297316005
 GameObject:
   m_ObjectHideFlags: 0
@@ -855,6 +873,7 @@ MonoBehaviour:
   forceFitContainer: 1
   preventCardInteraction: 0
   alignment: 1
+  layoutDirection: 0
   allowCardRepositioning: 1
   maxCardRotation: 15
   maxHeightDisplacement: 40
@@ -1951,7 +1970,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0}
   m_AnchorMax: {x: 0.5, y: 0}
-  m_AnchoredPosition: {x: -864.06, y: 599}
+  m_AnchoredPosition: {x: -902.7, y: 601.2}
   m_SizeDelta: {x: 246.1195, y: 72.0847}
   m_Pivot: {x: 0.5, y: 0}
 --- !u!114 &755254136
@@ -1968,7 +1987,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   forceFitContainer: 1
   preventCardInteraction: 0
-  alignment: 1
+  alignment: 0
+  layoutDirection: 0
   allowCardRepositioning: 1
   maxCardRotation: 0
   maxHeightDisplacement: 0
@@ -2063,8 +2083,8 @@ MonoBehaviour:
       m_PersistentCalls:
         m_Calls: []
   cardPrefab: {fileID: 0}
-  childAnchorMin: {x: 0, y: 1}
-  childAnchorMax: {x: 0, y: 1}
+  childAnchorMin: {x: 0, y: 0.5}
+  childAnchorMax: {x: 0, y: 0.5}
   interCardSpacing: 0
   minSpacingWhenFitting: -30
   useCenterToCenterSpacing: 0
@@ -2485,12 +2505,13 @@ MonoBehaviour:
   - {fileID: 21300000, guid: a98b082d09c96314489d44e41b76749d, type: 3}
   - {fileID: 21300000, guid: e4f2d281a667477419bd8907feb54816, type: 3}
   - {fileID: 21300000, guid: fe93afc40cc540d489b4b81ea68c9744, type: 3}
+  - {fileID: 21300000, guid: fe93afc40cc540d489b4b81ea68c9744, type: 3}
   elementIcons:
   - {fileID: 21300000, guid: 8085dd45e892b4a4397d7d82173c46f4, type: 3}
   - {fileID: 21300000, guid: 54d5db7fc73eb2a44ac4612af21e3ce6, type: 3}
   - {fileID: 21300000, guid: c9dc60c67245fd54886278ac65674bcb, type: 3}
   dealOnStart: 1
-  handSizeOnStart: 9
+  handSizeOnStart: 10
 --- !u!1 &1070820819
 GameObject:
   m_ObjectHideFlags: 0
@@ -3608,7 +3629,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0}
   m_AnchorMax: {x: 0.5, y: 0}
-  m_AnchoredPosition: {x: -864.0598, y: 430}
+  m_AnchoredPosition: {x: -902.2, y: 443.8}
   m_SizeDelta: {x: 246.1195, y: 72.0847}
   m_Pivot: {x: 0.5, y: 0}
 --- !u!114 &1780545974
@@ -3625,7 +3646,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   forceFitContainer: 1
   preventCardInteraction: 0
-  alignment: 1
+  alignment: 0
+  layoutDirection: 0
   allowCardRepositioning: 1
   maxCardRotation: 0
   maxHeightDisplacement: 0
@@ -3720,8 +3742,8 @@ MonoBehaviour:
       m_PersistentCalls:
         m_Calls: []
   cardPrefab: {fileID: 0}
-  childAnchorMin: {x: 0, y: 1}
-  childAnchorMax: {x: 0, y: 1}
+  childAnchorMin: {x: 0, y: 0.5}
+  childAnchorMax: {x: 0, y: 0.5}
   interCardSpacing: 0
   minSpacingWhenFitting: -30
   useCenterToCenterSpacing: 0
@@ -4012,12 +4034,13 @@ MonoBehaviour:
   - {fileID: 21300000, guid: a98b082d09c96314489d44e41b76749d, type: 3}
   - {fileID: 21300000, guid: e4f2d281a667477419bd8907feb54816, type: 3}
   - {fileID: 21300000, guid: fe93afc40cc540d489b4b81ea68c9744, type: 3}
+  - {fileID: 21300000, guid: fe93afc40cc540d489b4b81ea68c9744, type: 3}
   elementIcons:
   - {fileID: 21300000, guid: 8085dd45e892b4a4397d7d82173c46f4, type: 3}
   - {fileID: 21300000, guid: 54d5db7fc73eb2a44ac4612af21e3ce6, type: 3}
   - {fileID: 21300000, guid: c9dc60c67245fd54886278ac65674bcb, type: 3}
   dealOnStart: 1
-  handSizeOnStart: 9
+  handSizeOnStart: 10
 --- !u!1 &2063683051
 GameObject:
   m_ObjectHideFlags: 0

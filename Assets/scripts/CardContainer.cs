@@ -19,6 +19,9 @@ public class CardContainer : MonoBehaviour {
     private CardAlignment alignment = CardAlignment.Center;
 
     [SerializeField]
+    private LayoutDirection layoutDirection = LayoutDirection.LeftToRight;
+
+    [SerializeField]
     private bool allowCardRepositioning = true;
 
     [Header("Rotation")]
@@ -71,6 +74,8 @@ public class CardContainer : MonoBehaviour {
     private RectTransform rectTransform;
     private CardWrapper currentDraggedCard;
 
+    public IReadOnlyList<CardWrapper> Cards => cards;
+
     private void Start() {
         rectTransform = GetComponent<RectTransform>();
         InitCards();
@@ -117,6 +122,13 @@ public class CardContainer : MonoBehaviour {
 
     public void setCardPlayed(bool played) {
         cardPlayConfig.cardPlayed = played;
+    }
+
+    public void SetPreventCardInteraction(bool value) {
+        preventCardInteraction = value;
+        foreach (var card in cards) {
+            card.preventCardInteraction = value;
+        }
     }
 
     void SetUpCards() {
@@ -170,7 +182,8 @@ public class CardContainer : MonoBehaviour {
 
     private void SetCardsUILayers() {
         for (var i = 0; i < cards.Count; i++) {
-            cards[i].uiLayer = zoomConfig.defaultSortOrder + i;
+            var layerOrder = (layoutDirection == LayoutDirection.LeftToRight) ? i : cards.Count - 1 - i;
+            cards[i].uiLayer = zoomConfig.defaultSortOrder + layerOrder;
         }
     }
 
@@ -242,7 +255,8 @@ public class CardContainer : MonoBehaviour {
             }
 
             var currentCenter = firstCenter;
-            foreach (CardWrapper child in cards) {
+            var orderedCards = GetOrderedCards();
+            foreach (CardWrapper child in orderedCards) {
                 child.targetPosition = new Vector2(currentCenter, transform.position.y);
                 currentCenter += centerSpacing;
             }
@@ -253,7 +267,8 @@ public class CardContainer : MonoBehaviour {
             distanceBetweenChildren = Mathf.Max(distanceBetweenChildren, minSpacingWhenFitting);
             // Set all children's positions to be evenly spaced out
             var currentX = transform.position.x - width / 2;
-            foreach (CardWrapper child in cards) {
+            var orderedCards = GetOrderedCards();
+            foreach (CardWrapper child in orderedCards) {
                 var adjustedChildWidth = child.width * child.transform.lossyScale.x;
                 child.targetPosition = new Vector2(currentX + adjustedChildWidth / 2, transform.position.y);
                 currentX += adjustedChildWidth + distanceBetweenChildren;
@@ -287,14 +302,16 @@ public class CardContainer : MonoBehaviour {
             }
 
             var currentCenter = firstCenter;
-            foreach (CardWrapper child in cards) {
+            var orderedCards = GetOrderedCards();
+            foreach (CardWrapper child in orderedCards) {
                 child.targetPosition = new Vector2(currentCenter, transform.position.y);
                 currentCenter += interCardSpacing;
             }
         }
         else {
             var currentPosition = GetAnchorPositionByAlignment(childrenTotalWidth);
-            foreach (CardWrapper child in cards) {
+            var orderedCards = GetOrderedCards();
+            foreach (CardWrapper child in orderedCards) {
                 var adjustedChildWidth = child.width * child.transform.lossyScale.x;
                 child.targetPosition = new Vector2(currentPosition + adjustedChildWidth / 2, transform.position.y);
                 // Move current position by the child's width plus any configured extra spacing
@@ -317,6 +334,13 @@ public class CardContainer : MonoBehaviour {
         }
     }
 
+    private IEnumerable<CardWrapper> GetOrderedCards() {
+        if (layoutDirection == LayoutDirection.RightToLeft) {
+            return cards.AsEnumerable().Reverse();
+        }
+        return cards;
+    }
+
     private void SetCardsAnchor() {
         foreach (CardWrapper child in cards) {
             child.SetAnchor(childAnchorMin, childAnchorMax);
@@ -330,51 +354,7 @@ public class CardContainer : MonoBehaviour {
     public void OnCardDragEnd() {
         // If card is in play area, play it!
         if (!cardPlayConfig.cardPlayed && IsCursorInPlayArea()) {
-            Debug.LogWarning("CardContainer: card played");
-            eventsConfig?.OnCardPlayed?.Invoke(new CardPlayed(currentDraggedCard));
-
-            var playArea = cardPlayConfig.playArea;
-            // Compute play area center in world space (if playArea exists)
-            Vector3 playCenterWorld = Vector3.zero;
-            if (playArea != null) {
-                var playAreaCorners = new Vector3[4];
-                playArea.GetWorldCorners(playAreaCorners);
-                playCenterWorld = new Vector3((playAreaCorners[0].x + playAreaCorners[2].x) / 2f,
-                    (playAreaCorners[0].y + playAreaCorners[2].y) / 2f,
-                    playAreaCorners[0].z);
-            }
-
-            if (cardPlayConfig.destroyOnPlay) {
-                DestroyCard(currentDraggedCard);
-            }
-            else {
-                // Lock the card into the center of the play area (or leave in place if no playArea set)
-                var card = currentDraggedCard;
-                // Remove from layout management so container won't reposition it
-                if (cards.Contains(card)) cards.Remove(card);
-                // Disable further interaction and clear its container reference
-                card.preventCardInteraction = true;
-                card.container = null;
-
-                if (playArea != null) {
-                    // Parent under the play area so it renders in that UI space
-                    card.transform.SetParent(playArea, true);
-                    // Place at center immediately
-                    var rect = card.GetComponent<RectTransform>();
-                    if (rect != null) {
-                        rect.position = playCenterWorld;
-                        card.targetPosition = playCenterWorld;
-                        card.targetRotation = 0;
-                        card.targetVerticalDisplacement = 0;
-                        card.uiLayer = 1;
-                    }
-                    else {
-                        card.transform.position = playCenterWorld;
-                    }
-                }
-                cardPlayConfig.cardPlayed = true;
-
-            }
+            CompleteCardPlay(currentDraggedCard);
         }
         currentDraggedCard = null;
     }
@@ -383,6 +363,22 @@ public class CardContainer : MonoBehaviour {
         cards.Remove(card);
         eventsConfig.OnCardDestroy?.Invoke(new CardDestroy(card));
         Destroy(card.gameObject);
+    }
+
+    public void PlayCard(CardWrapper card) {
+        if (cardPlayConfig.cardPlayed || card == null) {
+            return;
+        }
+
+        if (!cards.Contains(card)) {
+            InitCards();
+        }
+
+        if (!cards.Contains(card)) {
+            return;
+        }
+
+        CompleteCardPlay(card);
     }
 
     // --- Runtime spawning helpers ---
@@ -443,7 +439,64 @@ public class CardContainer : MonoBehaviour {
 
     public void SpawnCard(CardWrapper card) {
         Debug.LogWarning("DiscardContainer: card added to discard!");
+
+        // Re-apply this container's configuration to the card
+        card.zoomConfig = zoomConfig;
+        card.animationSpeedConfig = animationSpeedConfig;
+        card.eventsConfig = eventsConfig;
+        card.preventCardInteraction = preventCardInteraction;
+        card.container = this;
+
         cards.Add(card);
         // CardContainer detects new children in its Update() and will re-init layout on next frame.
     }
+
+    private void CompleteCardPlay(CardWrapper card) {
+        if (card == null) {
+            return;
+        }
+
+        Debug.LogWarning("CardContainer: card played");
+        eventsConfig?.OnCardPlayed?.Invoke(new CardPlayed(card));
+
+        var playArea = cardPlayConfig.playArea;
+        Vector3 playCenterWorld = Vector3.zero;
+        if (playArea != null) {
+            var playAreaCorners = new Vector3[4];
+            playArea.GetWorldCorners(playAreaCorners);
+            playCenterWorld = new Vector3((playAreaCorners[0].x + playAreaCorners[2].x) / 2f,
+                (playAreaCorners[0].y + playAreaCorners[2].y) / 2f,
+                playAreaCorners[0].z);
+        }
+
+        if (cardPlayConfig.destroyOnPlay) {
+            DestroyCard(card);
+            return;
+        }
+
+        if (cards.Contains(card)) cards.Remove(card);
+        card.preventCardInteraction = true;
+        card.container = null;
+
+        if (playArea != null) {
+            card.transform.SetParent(playArea, true);
+            var rect = card.GetComponent<RectTransform>();
+            if (rect != null) {
+                card.targetPosition = playCenterWorld;
+                card.targetRotation = 0;
+                card.targetVerticalDisplacement = 0;
+                card.uiLayer = 1;
+            }
+            else {
+                card.transform.position = playCenterWorld;
+            }
+        }
+
+        cardPlayConfig.cardPlayed = true;
+    }
+}
+
+public enum LayoutDirection {
+    LeftToRight,
+    RightToLeft
 }
