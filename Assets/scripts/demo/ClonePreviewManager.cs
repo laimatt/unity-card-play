@@ -63,7 +63,9 @@ namespace demo {
         }
 
         public void OnCardPreviewEnded(CardWrapper card) {
-            previews[card].gameObject.SetActive(false);
+            if (previews.ContainsKey(card)) {
+                previews[card].gameObject.SetActive(false);
+            }
         }
     }
 }
