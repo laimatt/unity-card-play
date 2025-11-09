@@ -3,16 +3,19 @@ using UnityEngine.UI;
 using TMPro;
 
 public class CardView : MonoBehaviour {
-    [SerializeField] private TMP_Text titleText;
-    [SerializeField] private Image artworkImage;
+    [SerializeField] public string representation;
+
+    [SerializeField] public string vowelharmony;
+    [SerializeField] public string firstlast;
     [SerializeField] public int powerValue;
     [SerializeField] public int elementValue;
     [SerializeField] private Image powerImage;
     [SerializeField] private Image elementImage;
 
     public void Initialize(CardData data) {
-        if (titleText != null) titleText.text = data.cardName;
-        if (artworkImage != null) artworkImage.sprite = data.artwork;
+        representation = data.cardName;
+        vowelharmony = data.vowelharmony; // or another field
+        firstlast = data.firstlast; // or another field
         if (powerImage != null) powerImage.sprite = data.power_art;
         if (elementImage != null) elementImage.sprite = data.element_art;
         powerValue = data.power;
@@ -21,9 +24,10 @@ public class CardView : MonoBehaviour {
     }
 
     // Convenience initializer when you only have sprite + title (used by DeckManager)
-    public void Initialize(Sprite artwork, string title, int power, int element) {
-        if (artworkImage != null) artworkImage.sprite = artwork;
-        if (titleText != null) titleText.text = title;
+    public void Initialize(string title, string vh, string fl, int power, int element) {
+        representation = title;
+        vowelharmony = vh; // or another field
+        firstlast = fl; // or another field
         powerValue = power; 
         elementValue = element;
         
@@ -37,9 +41,10 @@ public class CardView : MonoBehaviour {
     }
 
     // Overload accepting direct sprites for power and element icons
-    public void Initialize(Sprite artwork, string title, int power, int element, Sprite powerSprite, Sprite elementSprite) {
-        if (artworkImage != null) artworkImage.sprite = artwork;
-        if (titleText != null) titleText.text = title;
+    public void Initialize(string title, string vh, string fl, int power, int element, Sprite powerSprite, Sprite elementSprite) {
+        representation = title;
+        vowelharmony = vh; // or another field
+        firstlast = fl; // or another field
         powerValue = power;
         elementValue = element;
         if (powerImage != null) powerImage.sprite = powerSprite;

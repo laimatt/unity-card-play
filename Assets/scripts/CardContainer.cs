@@ -427,13 +427,50 @@ public class CardContainer : MonoBehaviour {
         if (cardPlayConfig.playArea == null) return false;
         
         var cursorPosition = Input.mousePosition;
-        var playArea = cardPlayConfig.playArea;
-        var playAreaCorners = new Vector3[4];
-        playArea.GetWorldCorners(playAreaCorners);
-        return cursorPosition.x > playAreaCorners[0].x &&
-               cursorPosition.x < playAreaCorners[2].x &&
-               cursorPosition.y > playAreaCorners[0].y &&
-               cursorPosition.y < playAreaCorners[2].y;
+        var vowelArea = cardPlayConfig.vowelharmonyArea;
+        var vowelAreaCorners = new Vector3[4];
+        vowelArea.GetWorldCorners(vowelAreaCorners);
+
+        var firstlastArea = cardPlayConfig.firstlastArea;
+        var firstlastAreaCorners = new Vector3[4];
+        firstlastArea.GetWorldCorners(firstlastAreaCorners);
+
+
+
+
+        if (cursorPosition.x > vowelAreaCorners[0].x &&
+            cursorPosition.x < vowelAreaCorners[2].x &&
+            cursorPosition.y > vowelAreaCorners[0].y &&
+            cursorPosition.y < vowelAreaCorners[2].y) {
+
+            var cardView1 = currentDraggedCard.GetComponent<CardView>();
+
+            cardView1.representation = cardView1.vowelharmony;
+            
+            // currentDraggedCard.titleText.text = currentDraggedCard.vowelharmony;
+            Debug.Log("In vowel harmony area");
+            return true;
+            }
+        else if (cursorPosition.x > firstlastAreaCorners[0].x &&
+                 cursorPosition.x < firstlastAreaCorners[2].x &&
+                 cursorPosition.y > firstlastAreaCorners[0].y &&
+                 cursorPosition.y < firstlastAreaCorners[2].y) {
+
+            var cardView1 = currentDraggedCard.GetComponent<CardView>();
+
+            cardView1.representation = cardView1.firstlast;
+            Debug.Log("In first/last area");
+            return true;
+            }
+        else
+            return false;
+
+
+    
+        // return cursorPosition.x > playAreaCorners[0].x &&
+        //        cursorPosition.x < playAreaCorners[2].x &&
+        //        cursorPosition.y > playAreaCorners[0].y &&
+        //        cursorPosition.y < playAreaCorners[2].y;
         
     }
 

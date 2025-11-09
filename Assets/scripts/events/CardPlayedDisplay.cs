@@ -19,8 +19,11 @@ public class CardPlayedDisplay : MonoBehaviour {
             return;
         }
 
-        var cardName = evt?.card?.gameObject?.name ?? "Card";
-        messageText.text = $"Played: {cardName}";
+        var cardView1 = evt.card != null ? evt.card.GetComponent<CardView>() : null;
+
+        var name = cardView1 != null ? cardView1.representation : "bido";
+        
+        messageText.text = $"Played: {name}";
 
         // Debug.LogWarning($"CardPlayedDisplay: {cardName}");
         StopAllCoroutines();

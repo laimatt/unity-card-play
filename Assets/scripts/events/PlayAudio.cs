@@ -13,17 +13,22 @@ public class PlayAudio : MonoBehaviour {
 
 
     public void Audio(CardPlayed evt) {
-        if (soundEffectAudioSource == null) {
+        if (soundEffectAudioSource == null)
+        {
             Debug.LogWarning("PlayAudio: audio is not assigned.");
             return;
         }
 
         // string path = Path.Combine(Application.streamingAssetsPath);
+        
+        var cardView1 = evt.card != null ? evt.card.GetComponent<CardView>() : null;
 
-        var cardName = evt?.card?.gameObject?.name ?? "bido";
+        var name = cardView1 != null ? cardView1.representation : "bido";
+
+        // var cardName = evt?.card?.gameObject?.name ?? "bido";
         // messageText.clip = cardName;
 
-        AudioClip clip = Resources.Load<AudioClip>($"Sounds/{cardName}");
+        AudioClip clip = Resources.Load<AudioClip>($"Sounds/{name}");
         // Debug.LogWarning($"PlayAudio: {cardName} ");
 
         soundEffectAudioSource.clip = clip;

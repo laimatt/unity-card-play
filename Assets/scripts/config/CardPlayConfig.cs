@@ -6,6 +6,12 @@ namespace config {
     public class CardPlayConfig {
         [SerializeField]
         public RectTransform playArea;
+
+        [SerializeField]
+        public RectTransform vowelharmonyArea;
+
+        [SerializeField]
+        public RectTransform firstlastArea;
         
         [SerializeField]
         public bool destroyOnPlay;
