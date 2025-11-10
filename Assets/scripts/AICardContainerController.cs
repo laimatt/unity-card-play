@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using events;
 using UnityEngine;
 
@@ -73,6 +74,7 @@ public class AICardContainerController : MonoBehaviour {
 
         var card = SelectCard();
         if (card != null) {
+            AssignRandomRepresentation(card);
             aiContainer.PlayCard(card);
         }
         playRoutine = null;
@@ -83,13 +85,19 @@ public class AICardContainerController : MonoBehaviour {
             return null;
         }
 
+        var availableCards = new List<CardWrapper>();
         foreach (var card in aiContainer.Cards) {
             if (card != null) {
-                return card;
+                availableCards.Add(card);
             }
         }
 
-        return null;
+        if (availableCards.Count == 0) {
+            return null;
+        }
+
+        var randomIndex = Random.Range(0, availableCards.Count);
+        return availableCards[randomIndex];
     }
 
     private bool IsReadyToAct() {
@@ -109,5 +117,24 @@ public class AICardContainerController : MonoBehaviour {
             StopCoroutine(playRoutine);
             playRoutine = null;
         }
+    }
+
+    private void AssignRandomRepresentation(CardWrapper card) {
+        if (card == null) {
+            return;
+        }
+
+        var view = card.GetComponent<CardView>();
+        if (view == null) {
+            return;
+        }
+
+        var options = new[] { view.representation, view.vowelharmony, view.firstlast };
+        if (options.Length == 0) {
+            return;
+        }
+
+        var randomIndex = Random.Range(0, options.Length);
+        view.representation = options[randomIndex];
     }
 }

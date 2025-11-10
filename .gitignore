@@ -12,6 +12,11 @@
 
 /MonoBleedingEdge/
 /play-card-container/
+/play-card-container.exe
+/play-card-container_Data/
+/play-card-container_BurstDebugInformation_DoNotShip/
+/UnityCrashHandler64.exe
+/UnityPlayer.dll
 
 # Asset meta data should only be ignored when the corresponding asset is also ignored
 !/[Aa]ssets/**/*.meta

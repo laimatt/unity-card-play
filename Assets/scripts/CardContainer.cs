@@ -40,7 +40,7 @@ public class CardContainer : MonoBehaviour {
 
     [SerializeField]
     private CardPlayConfig cardPlayConfig;
-    
+
     [Header("Events")]
     [SerializeField]
     public EventsConfig eventsConfig;
@@ -48,14 +48,14 @@ public class CardContainer : MonoBehaviour {
     [Header("Spawning")]
     [SerializeField]
     private GameObject cardPrefab;
-    
+
     [Header("Anchors")]
     [SerializeField]
     private Vector2 childAnchorMin = new Vector2(0f, 0.5f);
 
     [SerializeField]
     private Vector2 childAnchorMax = new Vector2(0f, 0.5f);
-    
+
     [Header("Spacing")]
     [Tooltip("Extra horizontal spacing (in world units) added between cards when not forcing fit to container.")]
     [SerializeField]
@@ -68,7 +68,7 @@ public class CardContainer : MonoBehaviour {
     [Tooltip("When enabled, spacing values are interpreted as center-to-center distance between cards instead of edge-to-edge gap.")]
     [SerializeField]
     private bool useCenterToCenterSpacing = false;
-    
+
     private List<CardWrapper> cards = new();
 
     private RectTransform rectTransform;
@@ -95,16 +95,12 @@ public class CardContainer : MonoBehaviour {
 
     private float GetCardVerticalDisplacement(int index) {
         if (cards.Count < 3) return 0;
-        // Associate a vertical displacement based on the index in the cards list
-        // so that the center card is at max displacement while the edges are at 0 displacement
         return maxHeightDisplacement *
                (1 - Mathf.Pow(index - (cards.Count - 1) / 2f, 2) / Mathf.Pow((cards.Count - 1) / 2f, 2));
     }
 
     private float GetCardRotation(int index) {
         if (cards.Count < 3) return 0;
-        // Associate a rotation based on the index in the cards list
-        // so that the first and last cards are at max rotation, mirrored around the center
         return -maxCardRotation * (index - (cards.Count - 1) / 2f) / ((cards.Count - 1) / 2f);
     }
 
@@ -114,55 +110,6 @@ public class CardContainer : MonoBehaviour {
 
     public void PublicUpdate() {
         UpdateCards();
-    }
-
-    public bool isCardPlayed() {
-        return cardPlayConfig.cardPlayed;
-    }
-
-    public void setCardPlayed(bool played) {
-        cardPlayConfig.cardPlayed = played;
-    }
-
-    public void SetPreventCardInteraction(bool value) {
-        preventCardInteraction = value;
-        foreach (var card in cards) {
-            card.preventCardInteraction = value;
-        }
-    }
-
-    void SetUpCards() {
-        cards.Clear();
-        foreach (Transform card in transform) {
-            var wrapper = card.GetComponent<CardWrapper>();
-            if (wrapper == null) {
-                wrapper = card.gameObject.AddComponent<CardWrapper>();
-            }
-
-            cards.Add(wrapper);
-
-            AddOtherComponentsIfNeeded(wrapper);
-
-            // Pass child card any extra config it should be aware of
-            wrapper.zoomConfig = zoomConfig;
-            wrapper.animationSpeedConfig = animationSpeedConfig;
-            wrapper.eventsConfig = eventsConfig;
-            wrapper.preventCardInteraction = preventCardInteraction;
-            wrapper.container = this;
-        }
-    }
-
-    private void AddOtherComponentsIfNeeded(CardWrapper wrapper) {
-        var canvas = wrapper.GetComponent<Canvas>();
-        if (canvas == null) {
-            canvas = wrapper.gameObject.AddComponent<Canvas>();
-        }
-
-        canvas.overrideSorting = true;
-
-        if (wrapper.GetComponent<GraphicRaycaster>() == null) {
-            wrapper.gameObject.AddComponent<GraphicRaycaster>();
-        }
     }
 
     private void UpdateCards() {
@@ -180,6 +127,54 @@ public class CardContainer : MonoBehaviour {
         UpdateCardOrder();
     }
 
+    private bool IsCursorInPlayArea() {
+        if (cardPlayConfig == null) {
+            return false;
+        }
+
+        var cursorPosition = Input.mousePosition;
+
+        if (IsCursorInsideRect(cursorPosition, cardPlayConfig.vowelharmonyArea)) {
+            var cardView = currentDraggedCard != null ? currentDraggedCard.GetComponent<CardView>() : null;
+            if (cardView != null) {
+                cardView.representation = cardView.vowelharmony;
+            }
+            Debug.Log("In vowel harmony area");
+            return true;
+        }
+
+        if (IsCursorInsideRect(cursorPosition, cardPlayConfig.firstlastArea)) {
+            var cardView = currentDraggedCard != null ? currentDraggedCard.GetComponent<CardView>() : null;
+            if (cardView != null) {
+                cardView.representation = cardView.firstlast;
+            }
+            Debug.Log("In first/last area");
+            return true;
+        }
+
+        if (IsCursorInsideRect(cursorPosition, cardPlayConfig.playArea)) {
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool IsCursorInsideRect(Vector3 cursorPosition, RectTransform rect) {
+        if (rect == null) {
+            return false;
+        }
+
+        var corners = new Vector3[4];
+        rect.GetWorldCorners(corners);
+        return cursorPosition.x > corners[0].x &&
+               cursorPosition.x < corners[2].x &&
+               cursorPosition.y > corners[0].y &&
+               cursorPosition.y < corners[2].y;
+    }
+
+    private void SetCardsUIStyles() {
+    }
+
     private void SetCardsUILayers() {
         for (var i = 0; i < cards.Count; i++) {
             var layerOrder = (layoutDirection == LayoutDirection.LeftToRight) ? i : cards.Count - 1 - i;
@@ -190,7 +185,6 @@ public class CardContainer : MonoBehaviour {
     private void UpdateCardOrder() {
         if (!allowCardRepositioning || currentDraggedCard == null) return;
 
-        // Get the index of the dragged card depending on its position
         var newCardIdx = cards.Count(card => currentDraggedCard.transform.position.x > card.transform.position.x);
         var originalCardIdx = cards.IndexOf(currentDraggedCard);
         if (newCardIdx != originalCardIdx) {
@@ -201,18 +195,19 @@ public class CardContainer : MonoBehaviour {
 
             cards.Insert(newCardIdx, currentDraggedCard);
         }
-        // Also reorder in the hierarchy
         currentDraggedCard.transform.SetSiblingIndex(newCardIdx);
     }
 
     private void SetCardsPosition() {
-        // Compute the total width of all the cards in global space
         var cardsTotalWidth = cards.Sum(card => card.width * card.transform.lossyScale.x);
-        // Compute the width of the container in global space
         var containerWidth = rectTransform.rect.width * transform.lossyScale.x;
-        // if (forceFitContainer && cardsTotalWidth > containerWidth) {
         if (cards.Count > 1) {
-            DistributeChildrenToFitContainer(cardsTotalWidth);
+            if (forceFitContainer) {
+                DistributeChildrenToFitContainer(cardsTotalWidth);
+            }
+            else {
+                DistributeChildrenWithoutOverlap(cardsTotalWidth);
+            }
         }
         else {
             DistributeChildrenWithoutOverlap(cardsTotalWidth);
@@ -220,12 +215,9 @@ public class CardContainer : MonoBehaviour {
     }
 
     private void DistributeChildrenToFitContainer(float childrenTotalWidth) {
-        // Get the width of the container
         var width = rectTransform.rect.width * transform.lossyScale.x;
-        // Get the distance between each child (handle single-card case)
         var slots = Mathf.Max(1, cards.Count - 1);
         if (useCenterToCenterSpacing) {
-            // Compute available span between the first and last possible centers
             var leftEdge = transform.position.x - width / 2;
             var rightEdge = transform.position.x + width / 2;
             var firstHalf = cards[0].width * cards[0].transform.lossyScale.x / 2f;
@@ -237,7 +229,6 @@ public class CardContainer : MonoBehaviour {
             var centerSpacing = Mathf.Max(desiredCenterSpacing, minSpacingWhenFitting);
             var totalSpan = centerSpacing * slots;
 
-            // Choose starting center based on alignment so spacing increase doesn't push layout off-center
             float firstCenter;
             switch (alignment) {
                 case CardAlignment.Left:
@@ -263,9 +254,7 @@ public class CardContainer : MonoBehaviour {
         }
         else {
             var distanceBetweenChildren = (width - childrenTotalWidth) / (float)slots;
-            // Ensure we respect a minimum spacing if user configured one
             distanceBetweenChildren = Mathf.Max(distanceBetweenChildren, minSpacingWhenFitting);
-            // Set all children's positions to be evenly spaced out
             var currentX = transform.position.x - width / 2;
             var orderedCards = GetOrderedCards();
             foreach (CardWrapper child in orderedCards) {
@@ -278,7 +267,6 @@ public class CardContainer : MonoBehaviour {
 
     private void DistributeChildrenWithoutOverlap(float childrenTotalWidth) {
         if (useCenterToCenterSpacing) {
-            // Compute total center span and starting center depending on alignment
             var totalSpan = interCardSpacing * (cards.Count - 1);
             var containerWidthInGlobalSpace = rectTransform.rect.width * transform.lossyScale.x;
             float firstCenter;
@@ -314,7 +302,6 @@ public class CardContainer : MonoBehaviour {
             foreach (CardWrapper child in orderedCards) {
                 var adjustedChildWidth = child.width * child.transform.lossyScale.x;
                 child.targetPosition = new Vector2(currentPosition + adjustedChildWidth / 2, transform.position.y);
-                // Move current position by the child's width plus any configured extra spacing
                 currentPosition += adjustedChildWidth + interCardSpacing;
             }
         }
@@ -352,8 +339,7 @@ public class CardContainer : MonoBehaviour {
     }
 
     public void OnCardDragEnd() {
-        // If card is in play area, play it!
-        if (!cardPlayConfig.cardPlayed && IsCursorInPlayArea()) {
+        if (cardPlayConfig != null && !cardPlayConfig.cardPlayed && IsCursorInPlayArea()) {
             CompleteCardPlay(currentDraggedCard);
         }
         currentDraggedCard = null;
@@ -366,7 +352,11 @@ public class CardContainer : MonoBehaviour {
     }
 
     public void PlayCard(CardWrapper card) {
-        if (cardPlayConfig.cardPlayed || card == null) {
+        if (card == null) {
+            return;
+        }
+
+        if (cardPlayConfig != null && cardPlayConfig.cardPlayed) {
             return;
         }
 
@@ -381,8 +371,39 @@ public class CardContainer : MonoBehaviour {
         CompleteCardPlay(card);
     }
 
-    // --- Runtime spawning helpers ---
-    // Instantiates a card prefab as a child of this container, initializes CardWrapper and layout.
+    private void SetUpCards() {
+        cards.Clear();
+        foreach (Transform card in transform) {
+            var wrapper = card.GetComponent<CardWrapper>();
+            if (wrapper == null) {
+                wrapper = card.gameObject.AddComponent<CardWrapper>();
+            }
+
+            cards.Add(wrapper);
+
+            AddOtherComponentsIfNeeded(wrapper);
+
+            wrapper.zoomConfig = zoomConfig;
+            wrapper.animationSpeedConfig = animationSpeedConfig;
+            wrapper.eventsConfig = eventsConfig;
+            wrapper.preventCardInteraction = preventCardInteraction;
+            wrapper.container = this;
+        }
+    }
+
+    private void AddOtherComponentsIfNeeded(CardWrapper wrapper) {
+        var canvas = wrapper.GetComponent<Canvas>();
+        if (canvas == null) {
+            canvas = wrapper.gameObject.AddComponent<Canvas>();
+        }
+
+        canvas.overrideSorting = true;
+
+        if (wrapper.GetComponent<GraphicRaycaster>() == null) {
+            wrapper.gameObject.AddComponent<GraphicRaycaster>();
+        }
+    }
+
     public CardWrapper SpawnCard() {
         if (cardPrefab == null) {
             Debug.LogError("CardContainer: cardPrefab is null. Assign a card prefab in the inspector.");
@@ -390,7 +411,6 @@ public class CardContainer : MonoBehaviour {
         }
 
         var go = Instantiate(cardPrefab, transform);
-        // Ensure RectTransform and required UI components are preserved by using SetParent with worldPositionStays=false
         go.transform.SetParent(transform, false);
 
         var wrapper = go.GetComponent<CardWrapper>();
@@ -398,21 +418,18 @@ public class CardContainer : MonoBehaviour {
             wrapper = go.AddComponent<CardWrapper>();
         }
 
-        // Pass configuration expected by CardContainer
         wrapper.zoomConfig = zoomConfig;
         wrapper.animationSpeedConfig = animationSpeedConfig;
         wrapper.eventsConfig = eventsConfig;
         wrapper.preventCardInteraction = preventCardInteraction;
         wrapper.container = this;
 
-        // Add to internal list and refresh layout
         cards.Add(wrapper);
         InitCards();
 
         return wrapper;
     }
 
-    // Spawn multiple cards
     public List<CardWrapper> SpawnCards(int count) {
         var spawned = new List<CardWrapper>();
         for (int i = 0; i < count; i++) {
@@ -423,73 +440,50 @@ public class CardContainer : MonoBehaviour {
         return spawned;
     }
 
-    private bool IsCursorInPlayArea() {
-        if (cardPlayConfig.playArea == null) return false;
-        
-        var cursorPosition = Input.mousePosition;
-        var vowelArea = cardPlayConfig.vowelharmonyArea;
-        var vowelAreaCorners = new Vector3[4];
-        vowelArea.GetWorldCorners(vowelAreaCorners);
-
-        var firstlastArea = cardPlayConfig.firstlastArea;
-        var firstlastAreaCorners = new Vector3[4];
-        firstlastArea.GetWorldCorners(firstlastAreaCorners);
-
-
-
-
-        if (cursorPosition.x > vowelAreaCorners[0].x &&
-            cursorPosition.x < vowelAreaCorners[2].x &&
-            cursorPosition.y > vowelAreaCorners[0].y &&
-            cursorPosition.y < vowelAreaCorners[2].y) {
-
-            var cardView1 = currentDraggedCard.GetComponent<CardView>();
-
-            cardView1.representation = cardView1.vowelharmony;
-            
-            // currentDraggedCard.titleText.text = currentDraggedCard.vowelharmony;
-            Debug.Log("In vowel harmony area");
-            return true;
-            }
-        else if (cursorPosition.x > firstlastAreaCorners[0].x &&
-                 cursorPosition.x < firstlastAreaCorners[2].x &&
-                 cursorPosition.y > firstlastAreaCorners[0].y &&
-                 cursorPosition.y < firstlastAreaCorners[2].y) {
-
-            var cardView1 = currentDraggedCard.GetComponent<CardView>();
-
-            cardView1.representation = cardView1.firstlast;
-            Debug.Log("In first/last area");
-            return true;
-            }
-        else
-            return false;
-
-
-    
-        // return cursorPosition.x > playAreaCorners[0].x &&
-        //        cursorPosition.x < playAreaCorners[2].x &&
-        //        cursorPosition.y > playAreaCorners[0].y &&
-        //        cursorPosition.y < playAreaCorners[2].y;
-        
-    }
-
     public void SpawnCard(CardWrapper card) {
-        Debug.LogWarning("DiscardContainer: card added to discard!");
+        if (card == null) {
+            return;
+        }
 
-        // Re-apply this container's configuration to the card
+        // Ensure the card is parented to this container and shares its configs
+        card.transform.SetParent(transform, true);
         card.zoomConfig = zoomConfig;
         card.animationSpeedConfig = animationSpeedConfig;
         card.eventsConfig = eventsConfig;
         card.preventCardInteraction = preventCardInteraction;
         card.container = this;
 
-        cards.Add(card);
-        // CardContainer detects new children in its Update() and will re-init layout on next frame.
+        if (!cards.Contains(card)) {
+            cards.Add(card);
+        }
+
+        InitCards();
+    }
+
+    public void SetPreventCardInteraction(bool prevent) {
+        preventCardInteraction = prevent;
+        foreach (var card in cards) {
+            if (card != null) {
+                card.preventCardInteraction = prevent;
+            }
+        }
+    }
+
+    public void setCardPlayed(bool value) {
+        if (cardPlayConfig == null) {
+            return;
+        }
+
+        cardPlayConfig.cardPlayed = value;
     }
 
     private void CompleteCardPlay(CardWrapper card) {
         if (card == null) {
+            return;
+        }
+
+        if (cardPlayConfig == null) {
+            Debug.LogError("CardContainer: CardPlayConfig is not assigned.");
             return;
         }
 
