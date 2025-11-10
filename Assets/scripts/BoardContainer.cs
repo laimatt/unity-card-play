@@ -145,7 +145,7 @@ public class BoardContainer : MonoBehaviour {
         }
 
         StartCoroutine(ResetBoard());
-        Debug.LogWarning("BoardContainer: Both cards played!");
+        // Debug.LogWarning("BoardContainer: Both cards played!");
     }
 
     private void EnsureTotalTricksInitialized() {
@@ -186,7 +186,7 @@ public class BoardContainer : MonoBehaviour {
             return;
         }
 
-        Debug.LogWarning("BoardContainer: Uneven trick count detected. Consider adjusting hand sizes to keep turns even.");
+        // Debug.LogWarning("BoardContainer: Uneven trick count detected. Consider adjusting hand sizes to keep turns even.");
         parityWarningIssued = true;
     }
 
@@ -219,6 +219,11 @@ public class BoardContainer : MonoBehaviour {
 
     private RoundOutcome ResolveRoundOutcome(int elementOne, int powerOne, int elementTwo, int powerTwo) {
         var elementComparison = CompareElements(elementOne, elementTwo);
+        Debug.LogWarning($"BoardContainer: el2 {elementTwo}, el1 {elementOne}");
+        Debug.LogWarning($"BoardContainer: {elementComparison}");
+        Debug.LogWarning($"BoardContainer: p2 {powerTwo}, p1 {powerOne}");
+
+
         if (elementComparison > 0) {
             return RoundOutcome.Player1;
         }

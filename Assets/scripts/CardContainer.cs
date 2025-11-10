@@ -152,9 +152,9 @@ public class CardContainer : MonoBehaviour {
             return true;
         }
 
-        if (IsCursorInsideRect(cursorPosition, cardPlayConfig.playArea)) {
-            return true;
-        }
+        // if (IsCursorInsideRect(cursorPosition, cardPlayConfig.playArea)) {
+        //     return true;
+        // }
 
         return false;
     }
@@ -487,7 +487,7 @@ public class CardContainer : MonoBehaviour {
             return;
         }
 
-        Debug.LogWarning("CardContainer: card played");
+        // Debug.LogWarning("CardContainer: card played");
         eventsConfig?.OnCardPlayed?.Invoke(new CardPlayed(card));
 
         var playArea = cardPlayConfig.playArea;
