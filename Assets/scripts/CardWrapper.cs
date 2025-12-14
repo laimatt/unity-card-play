@@ -29,6 +29,10 @@ public class CardWrapper : MonoBehaviour, IPointerEnterHandler, IPointerExitHand
         get => rectTransform.rect.width * rectTransform.localScale.x;
     }
 
+    public float height {
+        get => rectTransform.rect.height * rectTransform.localScale.y;
+    }
+
     private void Awake() {
         rectTransform = GetComponent<RectTransform>();
     }

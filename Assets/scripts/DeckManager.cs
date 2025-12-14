@@ -22,7 +22,7 @@ public class DeckManager : MonoBehaviour {
     [SerializeField] private bool dealOnStart = true;
     [SerializeField] private int handSizeOnStart = 9;
 
-    private List<(string root, string vowelharmony, string firstlast)> cardDatabase = new();
+    private List<(string root, string vowelharmony, string firstlast, string disharmonic)> cardDatabase = new();
 
     private void LoadCardDatabase() {
         cardDatabase.Clear();
@@ -44,7 +44,8 @@ public class DeckManager : MonoBehaviour {
                 cardDatabase.Add((
                     values[1].Trim(), // root
                     values[2].Trim(), // vowelharmony
-                    values[3].Trim()  // firstlast
+                    values[3].Trim(),  // firstlast
+                    values[4].Trim()   // disharmonic
                 ));
             }
         }
@@ -53,7 +54,7 @@ public class DeckManager : MonoBehaviour {
     }
 
     // Spawn a single card from database entry and sprite
-    public void SpawnCard((string root, string vowelharmony, string firstlast) cardData, int power = 0, int element = 0) {
+    public void SpawnCard((string root, string vowelharmony, string firstlast, string disharmonic) cardData, int power = 0, int element = 0) {
         if (cardPrefab == null || cardContainer == null) {
             Debug.LogWarning("DeckManager: missing prefab or container.");
             return;
@@ -64,7 +65,7 @@ public class DeckManager : MonoBehaviour {
         if (view != null) {
             Sprite powerSprite = (power >= 0 && power < powerIcons.Count) ? powerIcons[power] : null;
             Sprite elementSprite = (element >= 0 && element < elementIcons.Count) ? elementIcons[element] : null;
-            view.Initialize(cardData.root, cardData.vowelharmony, cardData.firstlast, power + 1, element, powerSprite, elementSprite);
+            view.Initialize(cardData.root, cardData.vowelharmony, cardData.firstlast, cardData.disharmonic, power + 1, element, powerSprite, elementSprite);
         }
     }
 

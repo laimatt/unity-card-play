@@ -3,6 +3,7 @@ using UnityEngine;
 [CreateAssetMenu(menuName = "Card/CardData")]
 public class CardData : ScriptableObject {
     public string cardName;
+    public string disharmonic;
     public string firstlast;
     public string vowelharmony;
     public Sprite artwork;

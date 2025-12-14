@@ -30,6 +30,12 @@ public class BoardContainer : MonoBehaviour {
 
 
     [SerializeField]
+    private TextMeshProUGUI p1Text;
+
+    [SerializeField]
+    private TextMeshProUGUI p2Text;
+
+    [SerializeField]
     private TextMeshProUGUI messageText;
 
     public event Action RoundReset;
@@ -41,8 +47,8 @@ public class BoardContainer : MonoBehaviour {
     private bool parityWarningIssued;
 
     private const int ElementRed = 0;
-    private const int ElementGreen = 1;
-    private const int ElementBlue = 2;
+    private const int ElementGreen = 2;
+    private const int ElementBlue = 1;
 
     public bool IsMatchComplete => matchComplete;
 
@@ -139,13 +145,13 @@ public class BoardContainer : MonoBehaviour {
         var finalMessage = CheckForMatchEnd();
         UpdateScoreDisplay(roundMessage, finalMessage);
 
-        Debug.LogWarning($"BoardContainer: {roundMessage}");
+        Debug.LogWarning($"BoardContainer: roundmessage {roundMessage}");
         if (!string.IsNullOrEmpty(finalMessage)) {
-            Debug.LogWarning($"BoardContainer: {finalMessage}");
+            Debug.LogWarning($"BoardContainer: finalmessage {finalMessage}");
         }
 
         StartCoroutine(ResetBoard());
-        // Debug.LogWarning("BoardContainer: Both cards played!");
+        Debug.LogWarning("BoardContainer: Both cards played!");
     }
 
     private void EnsureTotalTricksInitialized() {
@@ -220,7 +226,7 @@ public class BoardContainer : MonoBehaviour {
     private RoundOutcome ResolveRoundOutcome(int elementOne, int powerOne, int elementTwo, int powerTwo) {
         var elementComparison = CompareElements(elementOne, elementTwo);
         Debug.LogWarning($"BoardContainer: el2 {elementTwo}, el1 {elementOne}");
-        Debug.LogWarning($"BoardContainer: {elementComparison}");
+        Debug.LogWarning($"BoardContainer: element comparison {elementComparison}");
         Debug.LogWarning($"BoardContainer: p2 {powerTwo}, p1 {powerOne}");
 
 
@@ -270,23 +276,28 @@ public class BoardContainer : MonoBehaviour {
     }
 
     private void UpdateScoreDisplay(string roundSummary = null, string finalSummary = null) {
-        if (messageText == null) {
+        if (p1Text == null || p2Text == null || messageText == null) {
             return;
         }
 
         var text = string.Empty;
+        var p1 = string.Empty;
+        var p2 = string.Empty;
+
         if (!string.IsNullOrEmpty(roundSummary)) {
             text += roundSummary + "\n";
         }
 
-        text += $"Player 1 score: {player_1_score}\n";
-        text += $"Player 2 score: {player_2_score}";
+        p1 += $"P1: {player_1_score}";
+        p2 += $"P2: {player_2_score}";
 
         if (!string.IsNullOrEmpty(finalSummary)) {
             text += "\n" + finalSummary;
         }
 
         messageText.text = text;
+        p1Text.text = p1;
+        p2Text.text = p2;
     }
 
     IEnumerator ResetBoard() {

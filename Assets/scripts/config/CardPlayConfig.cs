@@ -12,6 +12,9 @@ namespace config {
 
         [SerializeField]
         public RectTransform firstlastArea;
+
+        [SerializeField]
+        public RectTransform disharmonicArea;
         
         [SerializeField]
         public bool destroyOnPlay;

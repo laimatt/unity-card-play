@@ -7,6 +7,7 @@ public class CardView : MonoBehaviour {
 
     [SerializeField] public string vowelharmony;
     [SerializeField] public string firstlast;
+    [SerializeField] public string disharmonic;
     [SerializeField] public int powerValue;
     [SerializeField] public int elementValue;
     [SerializeField] private Image powerImage;
@@ -16,6 +17,7 @@ public class CardView : MonoBehaviour {
         representation = data.cardName;
         vowelharmony = data.vowelharmony; // or another field
         firstlast = data.firstlast; // or another field
+        disharmonic = data.disharmonic;
         if (powerImage != null) powerImage.sprite = data.power_art;
         if (elementImage != null) elementImage.sprite = data.element_art;
         powerValue = data.power;
@@ -24,10 +26,11 @@ public class CardView : MonoBehaviour {
     }
 
     // Convenience initializer when you only have sprite + title (used by DeckManager)
-    public void Initialize(string title, string vh, string fl, int power, int element) {
+    public void Initialize(string title, string vh, string fl, string dh, int power, int element) {
         representation = title;
         vowelharmony = vh; // or another field
         firstlast = fl; // or another field
+        disharmonic = dh;
         powerValue = power; 
         elementValue = element;
         
@@ -41,10 +44,11 @@ public class CardView : MonoBehaviour {
     }
 
     // Overload accepting direct sprites for power and element icons
-    public void Initialize(string title, string vh, string fl, int power, int element, Sprite powerSprite, Sprite elementSprite) {
+    public void Initialize(string title, string vh, string fl, string dh, int power, int element, Sprite powerSprite, Sprite elementSprite) {
         representation = title;
         vowelharmony = vh; // or another field
         firstlast = fl; // or another field
+        disharmonic = dh;
         powerValue = power;
         elementValue = element;
         if (powerImage != null) powerImage.sprite = powerSprite;

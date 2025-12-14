@@ -152,6 +152,15 @@ public class CardContainer : MonoBehaviour {
             return true;
         }
 
+        if (IsCursorInsideRect(cursorPosition, cardPlayConfig.disharmonicArea)) {
+            var cardView = currentDraggedCard != null ? currentDraggedCard.GetComponent<CardView>() : null;
+            if (cardView != null) {
+                cardView.representation = cardView.disharmonic;
+            }
+            Debug.Log("In disharmonic area");
+            return true;
+        }
+
         // if (IsCursorInsideRect(cursorPosition, cardPlayConfig.playArea)) {
         //     return true;
         // }
@@ -177,7 +186,9 @@ public class CardContainer : MonoBehaviour {
 
     private void SetCardsUILayers() {
         for (var i = 0; i < cards.Count; i++) {
-            var layerOrder = (layoutDirection == LayoutDirection.LeftToRight) ? i : cards.Count - 1 - i;
+            var layerOrder = (layoutDirection == LayoutDirection.LeftToRight || layoutDirection == LayoutDirection.TopToBottom)
+                ? i
+                : cards.Count - 1 - i;
             cards[i].uiLayer = zoomConfig.defaultSortOrder + layerOrder;
         }
     }
@@ -185,7 +196,18 @@ public class CardContainer : MonoBehaviour {
     private void UpdateCardOrder() {
         if (!allowCardRepositioning || currentDraggedCard == null) return;
 
-        var newCardIdx = cards.Count(card => currentDraggedCard.transform.position.x > card.transform.position.x);
+        var isVerticalLayout = layoutDirection == LayoutDirection.TopToBottom || layoutDirection == LayoutDirection.BottomToTop;
+        int newCardIdx;
+
+        if (isVerticalLayout) {
+            // For vertical layouts, count cards above the dragged card
+            newCardIdx = cards.Count(card => currentDraggedCard.transform.position.y < card.transform.position.y);
+        }
+        else {
+            // For horizontal layouts, count cards to the left of the dragged card
+            newCardIdx = cards.Count(card => currentDraggedCard.transform.position.x > card.transform.position.x);
+        }
+
         var originalCardIdx = cards.IndexOf(currentDraggedCard);
         if (newCardIdx != originalCardIdx) {
             cards.RemoveAt(originalCardIdx);
@@ -199,18 +221,35 @@ public class CardContainer : MonoBehaviour {
     }
 
     private void SetCardsPosition() {
-        var cardsTotalWidth = cards.Sum(card => card.width * card.transform.lossyScale.x);
-        var containerWidth = rectTransform.rect.width * transform.lossyScale.x;
-        if (cards.Count > 1) {
-            if (forceFitContainer) {
-                DistributeChildrenToFitContainer(cardsTotalWidth);
+        var isVerticalLayout = layoutDirection == LayoutDirection.TopToBottom || layoutDirection == LayoutDirection.BottomToTop;
+
+        if (isVerticalLayout) {
+            var cardsTotalHeight = cards.Sum(card => card.height * card.transform.lossyScale.y);
+            if (cards.Count > 1) {
+                if (forceFitContainer) {
+                    DistributeChildrenToFitContainerVertical(cardsTotalHeight);
+                }
+                else {
+                    DistributeChildrenWithoutOverlapVertical(cardsTotalHeight);
+                }
+            }
+            else {
+                DistributeChildrenWithoutOverlapVertical(cardsTotalHeight);
+            }
+        }
+        else {
+            var cardsTotalWidth = cards.Sum(card => card.width * card.transform.lossyScale.x);
+            if (cards.Count > 1) {
+                if (forceFitContainer) {
+                    DistributeChildrenToFitContainer(cardsTotalWidth);
+                }
+                else {
+                    DistributeChildrenWithoutOverlap(cardsTotalWidth);
+                }
             }
             else {
                 DistributeChildrenWithoutOverlap(cardsTotalWidth);
             }
-        }
-        else {
-            DistributeChildrenWithoutOverlap(cardsTotalWidth);
         }
     }
 
@@ -321,8 +360,138 @@ public class CardContainer : MonoBehaviour {
         }
     }
 
+    private void DistributeChildrenToFitContainerVertical(float childrenTotalHeight) {
+        var height = rectTransform.rect.height * transform.lossyScale.y;
+        var slots = Mathf.Max(1, cards.Count - 1);
+        if (useCenterToCenterSpacing) {
+            var topEdge = transform.position.y + height / 2;
+            var bottomEdge = transform.position.y - height / 2;
+            var firstHalf = cards[0].height * cards[0].transform.lossyScale.y / 2f;
+            var lastHalf = cards[cards.Count - 1].height * cards[cards.Count - 1].transform.lossyScale.y / 2f;
+            var firstPossibleCenter = topEdge - firstHalf;
+            var lastPossibleCenter = bottomEdge + lastHalf;
+            var maxAvailableSpan = firstPossibleCenter - lastPossibleCenter;
+            var desiredCenterSpacing = maxAvailableSpan / (float)slots;
+            var centerSpacing = Mathf.Max(desiredCenterSpacing, minSpacingWhenFitting);
+            var totalSpan = centerSpacing * slots;
+
+            float firstCenter;
+            switch (alignment) {
+                case CardAlignment.Left: // Top alignment for vertical
+                    firstCenter = firstPossibleCenter;
+                    break;
+                case CardAlignment.Center:
+                    // Center the entire span of cards vertically
+                    var spanMidpoint = totalSpan / 2f;
+                    firstCenter = transform.position.y + spanMidpoint;
+                    break;
+                case CardAlignment.Right: // Bottom alignment for vertical
+                    firstCenter = lastPossibleCenter + totalSpan;
+                    break;
+                default:
+                    firstCenter = firstPossibleCenter;
+                    break;
+            }
+
+            var currentCenter = firstCenter;
+            var orderedCards = GetOrderedCards();
+            foreach (CardWrapper child in orderedCards) {
+                child.targetPosition = new Vector2(transform.position.x, currentCenter);
+                currentCenter -= centerSpacing;
+            }
+        }
+        else {
+            var distanceBetweenChildren = (height - childrenTotalHeight) / (float)slots;
+            distanceBetweenChildren = Mathf.Max(distanceBetweenChildren, minSpacingWhenFitting);
+
+            float currentY;
+            switch (alignment) {
+                case CardAlignment.Left: // Top alignment for vertical
+                    currentY = transform.position.y + height / 2;
+                    break;
+                case CardAlignment.Center:
+                    // Center the cards vertically
+                    var totalUsedHeight = childrenTotalHeight + (distanceBetweenChildren * slots);
+                    currentY = transform.position.y + totalUsedHeight / 2;
+                    break;
+                case CardAlignment.Right: // Bottom alignment for vertical
+                    var totalUsedHeightBottom = childrenTotalHeight + (distanceBetweenChildren * slots);
+                    currentY = transform.position.y - height / 2 + totalUsedHeightBottom;
+                    break;
+                default:
+                    currentY = transform.position.y + height / 2;
+                    break;
+            }
+
+            var orderedCards = GetOrderedCards();
+            foreach (CardWrapper child in orderedCards) {
+                var adjustedChildHeight = child.height * child.transform.lossyScale.y;
+                child.targetPosition = new Vector2(transform.position.x, currentY - adjustedChildHeight / 2);
+                currentY -= adjustedChildHeight + distanceBetweenChildren;
+            }
+        }
+    }
+
+    private void DistributeChildrenWithoutOverlapVertical(float childrenTotalHeight) {
+        if (useCenterToCenterSpacing) {
+            var totalSpan = interCardSpacing * (cards.Count - 1);
+            var containerHeightInGlobalSpace = rectTransform.rect.height * transform.lossyScale.y;
+            float firstCenter;
+            switch (alignment) {
+                case CardAlignment.Left: // Top alignment for vertical
+                    var topEdge = transform.position.y + containerHeightInGlobalSpace / 2;
+                    firstCenter = topEdge - (cards[0].height * cards[0].transform.lossyScale.y) / 2f;
+                    break;
+                case CardAlignment.Center:
+                    // Center the span of cards vertically
+                    var spanMidpoint = totalSpan / 2f;
+                    firstCenter = transform.position.y + spanMidpoint;
+                    break;
+                case CardAlignment.Right: // Bottom alignment for vertical
+                    var bottomEdge = transform.position.y - containerHeightInGlobalSpace / 2;
+                    var lastHalf = (cards[cards.Count - 1].height * cards[cards.Count - 1].transform.lossyScale.y) / 2f;
+                    var lastCenter = bottomEdge + lastHalf;
+                    firstCenter = lastCenter + totalSpan;
+                    break;
+                default:
+                    firstCenter = GetAnchorPositionByAlignmentVertical(childrenTotalHeight);
+                    break;
+            }
+
+            var currentCenter = firstCenter;
+            var orderedCards = GetOrderedCards();
+            foreach (CardWrapper child in orderedCards) {
+                child.targetPosition = new Vector2(transform.position.x, currentCenter);
+                currentCenter -= interCardSpacing;
+            }
+        }
+        else {
+            var currentPosition = GetAnchorPositionByAlignmentVertical(childrenTotalHeight);
+            var orderedCards = GetOrderedCards();
+            foreach (CardWrapper child in orderedCards) {
+                var adjustedChildHeight = child.height * child.transform.lossyScale.y;
+                child.targetPosition = new Vector2(transform.position.x, currentPosition - adjustedChildHeight / 2);
+                currentPosition -= adjustedChildHeight + interCardSpacing;
+            }
+        }
+    }
+
+    private float GetAnchorPositionByAlignmentVertical(float childrenHeight) {
+        var containerHeightInGlobalSpace = rectTransform.rect.height * transform.lossyScale.y;
+        switch (alignment) {
+            case CardAlignment.Left: // Top alignment for vertical
+                return transform.position.y + containerHeightInGlobalSpace / 2;
+            case CardAlignment.Center:
+                return transform.position.y + childrenHeight / 2;
+            case CardAlignment.Right: // Bottom alignment for vertical
+                return transform.position.y - containerHeightInGlobalSpace / 2 + childrenHeight;
+            default:
+                return 0;
+        }
+    }
+
     private IEnumerable<CardWrapper> GetOrderedCards() {
-        if (layoutDirection == LayoutDirection.RightToLeft) {
+        if (layoutDirection == LayoutDirection.RightToLeft || layoutDirection == LayoutDirection.BottomToTop) {
             return cards.AsEnumerable().Reverse();
         }
         return cards;
@@ -529,5 +698,7 @@ public class CardContainer : MonoBehaviour {
 
 public enum LayoutDirection {
     LeftToRight,
-    RightToLeft
+    RightToLeft,
+    TopToBottom,
+    BottomToTop
 }

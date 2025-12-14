@@ -129,7 +129,7 @@ public class AICardContainerController : MonoBehaviour {
             return;
         }
 
-        var options = new[] { view.representation, view.vowelharmony, view.firstlast };
+        var options = new[] { view.representation, view.vowelharmony, view.firstlast, view.disharmonic };
         if (options.Length == 0) {
             return;
         }
