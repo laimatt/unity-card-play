@@ -39,12 +39,15 @@ public class BoardContainer : MonoBehaviour {
     private TextMeshProUGUI messageText;
 
     public event Action RoundReset;
+    public event Action<int> RoundWinner; // 1 = player 1, 2 = player 2
 
     private int totalTricksExpected;
     private int tricksPlayed;
     private bool matchComplete;
     private bool tieBreakerApplied;
     private bool parityWarningIssued;
+    private bool roundResolving;
+    private int? currentLeaderContainer;
 
     private const int ElementRed = 0;
     private const int ElementGreen = 2;
@@ -79,10 +82,12 @@ public class BoardContainer : MonoBehaviour {
 
     private void InitializeMatchMetadata() {
         totalTricksExpected = CalculateInitialTrickCount();
-        tricksPlayed = 0;
-        matchComplete = false;
-        tieBreakerApplied = false;
-        parityWarningIssued = false;
+    tricksPlayed = 0;
+    matchComplete = false;
+    tieBreakerApplied = false;
+    parityWarningIssued = false;
+    roundResolving = false;
+    currentLeaderContainer = null;
 
         if (totalTricksExpected == 0) {
             return;
@@ -98,50 +103,79 @@ public class BoardContainer : MonoBehaviour {
     }
 
     private void OnCardPlayedFromContainer1(CardPlayed e) {
+        if (currentLeaderContainer == null && lastCardPlayed_1 == null && lastCardPlayed_2 == null) {
+            currentLeaderContainer = 1; // first card this trick becomes leader
+        }
+
         lastCardPlayed_1 = e;
-        // you can access the card via e.card if needed
         BothCardsPlayed();
     }
 
     private void OnCardPlayedFromContainer2(CardPlayed e) {
+        if (currentLeaderContainer == null && lastCardPlayed_1 == null && lastCardPlayed_2 == null) {
+            currentLeaderContainer = 2; // first card this trick becomes leader
+        }
+
         lastCardPlayed_2 = e;
         BothCardsPlayed();
     }
 
     public void BothCardsPlayed() {
-        if (matchComplete || lastCardPlayed_1 == null || lastCardPlayed_2 == null) {
+        if (matchComplete || lastCardPlayed_1 == null || lastCardPlayed_2 == null || roundResolving) {
             return;
         }
 
+        roundResolving = true;
         EnsureTotalTricksInitialized();
 
         var cardView1 = lastCardPlayed_1.card != null ? lastCardPlayed_1.card.GetComponent<CardView>() : null;
         var cardView2 = lastCardPlayed_2.card != null ? lastCardPlayed_2.card.GetComponent<CardView>() : null;
 
-        int powerValue_1 = cardView1 != null ? cardView1.powerValue : -1;
-        int powerValue_2 = cardView2 != null ? cardView2.powerValue : -1;
+        var leaderIndex = currentLeaderContainer ?? 1;
+        var followerIndex = leaderIndex == 1 ? 2 : 1;
+        var leaderView = leaderIndex == 1 ? cardView1 : cardView2;
+        var followerView = leaderIndex == 1 ? cardView2 : cardView1;
 
-        int elementValue_1 = cardView1 != null ? cardView1.elementValue : -1;
-        int elementValue_2 = cardView2 != null ? cardView2.elementValue : -1;
-
-        var outcome = ResolveRoundOutcome(elementValue_1, powerValue_1, elementValue_2, powerValue_2);
+        var followerValid = SharesSuit(leaderView, followerView);
+        var outcome = ResolveRoundOutcome(leaderView, followerView, leaderIndex, out bool followerTieBreakerWin, followerValid);
 
         string roundMessage;
+        var leaderLabel = leaderIndex == 1 ? "Player 1" : "Player 2";
+        var followerLabel = followerIndex == 1 ? "Player 1" : "Player 2";
+
+        int winnerIndex = 0;
         switch (outcome) {
             case RoundOutcome.Player1:
                 player_1_score += 1;
-                roundMessage = "Player 1 wins the round!";
+                winnerIndex = 1;
+                roundMessage = followerValid
+                    ? "Player 1 wins the round!"
+                    : $"{followerLabel} mismatched suit; Player 1 wins the round!";
                 break;
             case RoundOutcome.Player2:
                 player_2_score += 1;
-                roundMessage = "Player 2 wins the round!";
+                winnerIndex = 2;
+                roundMessage = followerValid
+                    ? "Player 2 wins the round!"
+                    : $"{followerLabel} mismatched suit; Player 2 wins the round!";
                 break;
             default:
-                roundMessage = "Round is a tie!";
+                roundMessage = followerTieBreakerWin
+                    ? $"Perfect tie. {followerLabel} wins on follower advantage."
+                    : "Round is a tie!";
+                winnerIndex = followerTieBreakerWin ? followerIndex : 0;
                 break;
         }
 
+        if (followerTieBreakerWin) {
+            roundMessage = $"Perfect tie. {followerLabel} wins on follower advantage.";
+        }
+
         tricksPlayed += 1;
+        if (winnerIndex != 0) {
+            RoundWinner?.Invoke(winnerIndex);
+        }
+
         var finalMessage = CheckForMatchEnd();
         UpdateScoreDisplay(roundMessage, finalMessage);
 
@@ -151,7 +185,6 @@ public class BoardContainer : MonoBehaviour {
         }
 
         StartCoroutine(ResetBoard());
-        Debug.LogWarning("BoardContainer: Both cards played!");
     }
 
     private void EnsureTotalTricksInitialized() {
@@ -223,30 +256,40 @@ public class BoardContainer : MonoBehaviour {
         return "Match tied. Player 2 wins on the second-mover tiebreaker.";
     }
 
-    private RoundOutcome ResolveRoundOutcome(int elementOne, int powerOne, int elementTwo, int powerTwo) {
-        var elementComparison = CompareElements(elementOne, elementTwo);
-        Debug.LogWarning($"BoardContainer: el2 {elementTwo}, el1 {elementOne}");
-        Debug.LogWarning($"BoardContainer: element comparison {elementComparison}");
-        Debug.LogWarning($"BoardContainer: p2 {powerTwo}, p1 {powerOne}");
+    private RoundOutcome ResolveRoundOutcome(CardView leaderView, CardView followerView, int leaderContainerIndex, out bool followerTieBreakerWin, bool followerValid) {
+        followerTieBreakerWin = false;
 
+        var leaderElement = leaderView != null ? leaderView.elementValue : -1;
+        var followerElement = followerView != null ? followerView.elementValue : -1;
+        var leaderPower = leaderView != null ? leaderView.powerValue : -1;
+        var followerPower = followerView != null ? followerView.powerValue : -1;
+
+        // If follower failed suit match, leader wins immediately
+        if (!followerValid) {
+            return leaderContainerIndex == 1 ? RoundOutcome.Player1 : RoundOutcome.Player2;
+        }
+
+        var elementComparison = CompareElements(leaderElement, followerElement); // >0 leader wins element
 
         if (elementComparison > 0) {
-            return RoundOutcome.Player1;
+            return leaderContainerIndex == 1 ? RoundOutcome.Player1 : RoundOutcome.Player2;
         }
 
         if (elementComparison < 0) {
-            return RoundOutcome.Player2;
+            return leaderContainerIndex == 1 ? RoundOutcome.Player2 : RoundOutcome.Player1;
         }
 
-        if (powerOne > powerTwo) {
-            return RoundOutcome.Player1;
+        if (leaderPower > followerPower) {
+            return leaderContainerIndex == 1 ? RoundOutcome.Player1 : RoundOutcome.Player2;
         }
 
-        if (powerTwo > powerOne) {
-            return RoundOutcome.Player2;
+        if (followerPower > leaderPower) {
+            return leaderContainerIndex == 1 ? RoundOutcome.Player2 : RoundOutcome.Player1;
         }
 
-        return RoundOutcome.Tie;
+        // Perfect tie (element + power) => follower wins by rule
+        followerTieBreakerWin = true;
+        return leaderContainerIndex == 1 ? RoundOutcome.Player2 : RoundOutcome.Player1;
     }
 
     private int CompareElements(int elementOne, int elementTwo) {
@@ -273,6 +316,16 @@ public class BoardContainer : MonoBehaviour {
         }
 
         return 0;
+    }
+
+    private bool SharesSuit(CardView leader, CardView follower) {
+        if (leader == null || follower == null) {
+            return false;
+        }
+
+        return string.Equals(leader.vowelharmony, follower.vowelharmony, StringComparison.OrdinalIgnoreCase)
+               || string.Equals(leader.firstlast, follower.firstlast, StringComparison.OrdinalIgnoreCase)
+               || string.Equals(leader.disharmonic, follower.disharmonic, StringComparison.OrdinalIgnoreCase);
     }
 
     private void UpdateScoreDisplay(string roundSummary = null, string finalSummary = null) {
@@ -316,6 +369,8 @@ public class BoardContainer : MonoBehaviour {
         lastCardPlayed_2 = null;
         container_1.setCardPlayed(false);
         container_2.setCardPlayed(false);
+        currentLeaderContainer = null;
+        roundResolving = false;
         RoundReset?.Invoke();
     }
 

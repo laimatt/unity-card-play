@@ -17,8 +17,18 @@ public class TurnManager : MonoBehaviour {
     [SerializeField]
     private float aiTurnDelay = 0.75f;
 
+    [Header("AI Settings")]
+    [SerializeField]
+    private AICardContainerController aiController;
+
+    [SerializeField]
+    private AIDifficulty aiDifficulty = AIDifficulty.Medium;
+
     [SerializeField]
     private GameMode gameMode = GameMode.PlayerVsAI;
+
+    // 1 = player, 2 = ai/opponent; default player leads first
+    private int nextLeader = 1;
 
     private Coroutine aiRoutine;
 
@@ -35,6 +45,7 @@ public class TurnManager : MonoBehaviour {
 
         if (boardContainer != null) {
             boardContainer.RoundReset += OnRoundReset;
+            boardContainer.RoundWinner += OnRoundWinner;
         }
     }
 
@@ -49,11 +60,14 @@ public class TurnManager : MonoBehaviour {
 
         if (boardContainer != null) {
             boardContainer.RoundReset -= OnRoundReset;
+            boardContainer.RoundWinner -= OnRoundWinner;
         }
     }
 
     private void Start() {
-        BeginPlayerTurn();
+        nextLeader = 1;
+        ApplyAIDifficulty();
+        BeginNextTurn();
     }
 
     public void SetGameMode(GameMode mode) {
@@ -118,6 +132,30 @@ public class TurnManager : MonoBehaviour {
         aiRoutine = StartCoroutine(AITurnRoutine());
     }
 
+    private void BeginNextTurn() {
+        if (IsMatchComplete()) {
+            playerContainer?.SetPreventCardInteraction(true);
+            aiContainer?.SetPreventCardInteraction(true);
+            return;
+        }
+
+        if (gameMode == GameMode.PlayerVsAI) {
+            if (nextLeader == 1) {
+                BeginPlayerTurn();
+            } else {
+                BeginAITurn();
+            }
+        } else { // PvP
+            if (nextLeader == 1) {
+                playerContainer?.SetPreventCardInteraction(false);
+                aiContainer?.SetPreventCardInteraction(true);
+            } else {
+                playerContainer?.SetPreventCardInteraction(true);
+                aiContainer?.SetPreventCardInteraction(false);
+            }
+        }
+    }
+
     private IEnumerator AITurnRoutine() {
         yield return new WaitForSeconds(aiTurnDelay);
         var card = SelectAICard();
@@ -127,6 +165,11 @@ public class TurnManager : MonoBehaviour {
         }
         AssignRandomRepresentation(card);
         aiContainer.PlayCard(card);
+        // After AI leads, hand turn control to player (player vs AI only)
+        if (gameMode == GameMode.PlayerVsAI && !IsMatchComplete()) {
+            playerContainer?.SetPreventCardInteraction(false);
+            aiContainer?.SetPreventCardInteraction(true);
+        }
         aiRoutine = null;
     }
 
@@ -172,16 +215,22 @@ public class TurnManager : MonoBehaviour {
     }
 
     private void OnRoundReset() {
-        if (IsMatchComplete()) {
-            playerContainer?.SetPreventCardInteraction(true);
-            aiContainer?.SetPreventCardInteraction(true);
-            return;
-        }
-        BeginPlayerTurn();
+        BeginNextTurn();
     }
 
     private bool IsMatchComplete() {
         return boardContainer != null && boardContainer.IsMatchComplete;
+    }
+
+    private void OnRoundWinner(int winnerIndex) {
+        // 1 = player, 2 = ai/opponent
+        nextLeader = winnerIndex == 1 || winnerIndex == 2 ? winnerIndex : 1;
+    }
+
+    private void ApplyAIDifficulty() {
+        if (aiController != null) {
+            aiController.Difficulty = aiDifficulty;
+        }
     }
 
     private void OnOpponentCardPlayed(CardPlayed evt) {

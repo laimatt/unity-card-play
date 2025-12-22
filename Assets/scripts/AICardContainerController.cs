@@ -16,6 +16,16 @@ public class AICardContainerController : MonoBehaviour {
     [SerializeField]
     private float playDelay = 0.75f;
 
+    [SerializeField]
+    private AIDifficulty difficulty = AIDifficulty.Medium;
+
+    public AIDifficulty Difficulty {
+        get => difficulty;
+        set => difficulty = value;
+    }
+
+    private CardWrapper lastLeaderCard;
+
     private Coroutine playRoutine;
 
     private void Awake() {
@@ -57,12 +67,14 @@ public class AICardContainerController : MonoBehaviour {
             return;
         }
 
+        lastLeaderCard = evt.card;
         StopPendingPlay();
         playRoutine = StartCoroutine(PlayAfterDelay());
     }
 
     private void OnRoundReset() {
         StopPendingPlay();
+        lastLeaderCard = null;
     }
 
     private IEnumerator PlayAfterDelay() {
@@ -96,8 +108,46 @@ public class AICardContainerController : MonoBehaviour {
             return null;
         }
 
-        var randomIndex = Random.Range(0, availableCards.Count);
-        return availableCards[randomIndex];
+        var leaderView = lastLeaderCard != null ? lastLeaderCard.GetComponent<CardView>() : null;
+        var scored = new List<(CardWrapper card, int score)>();
+
+        foreach (var card in availableCards) {
+            var score = ScoreCard(card, leaderView);
+            scored.Add((card, score));
+        }
+
+        // Prefer valid moves (score > 0); if none exist, fall back to any card.
+        var valid = scored.FindAll(s => s.score > 0);
+        var pool = valid.Count > 0 ? valid : scored;
+
+        // easy sometimes picks suboptimal, medium picks near top, hard picks optimal.
+        pool.Sort((a, b) => b.score.CompareTo(a.score));
+
+        if (pool.Count == 0) {
+            return null;
+        }
+
+        int index;
+        switch (difficulty) {
+            case AIDifficulty.Easy:
+                // 50% chance to pick non-best option when possible
+                if (pool.Count > 1 && Random.value < 0.5f) {
+                    index = Random.Range(1, pool.Count);
+                } else {
+                    index = 0;
+                }
+                break;
+            case AIDifficulty.Medium:
+                var topRange = Mathf.Min(2, pool.Count);
+                index = Random.Range(0, topRange);
+                break;
+            case AIDifficulty.Hard:
+            default:
+                index = 0;
+                break;
+        }
+
+        return pool[index].card;
     }
 
     private bool IsReadyToAct() {
@@ -137,4 +187,73 @@ public class AICardContainerController : MonoBehaviour {
         var randomIndex = Random.Range(0, options.Length);
         view.representation = options[randomIndex];
     }
+
+    private int ScoreCard(CardWrapper candidate, CardView leaderView) {
+        var view = candidate != null ? candidate.GetComponent<CardView>() : null;
+        if (view == null) {
+            return 0;
+        }
+
+        if (leaderView == null) {
+            // No info about leader; pick by power as a fallback
+            return view.powerValue;
+        }
+
+        var matchesSuit = MatchesSuit(leaderView, view);
+        if (!matchesSuit) {
+            return 0; // illegal move per rules
+        }
+
+        int score = 10; // base for being legal
+
+        var elementResult = CompareElements(view.elementValue, leaderView.elementValue); // >0 means candidate wins element
+        if (elementResult > 0) score += 6;
+        else if (elementResult == 0) score += 2;
+
+        if (view.powerValue > leaderView.powerValue) score += 4;
+        else if (view.powerValue == leaderView.powerValue) score += 1;
+
+        return score;
+    }
+
+    private bool MatchesSuit(CardView leader, CardView follower) {
+        if (leader == null || follower == null) return false;
+
+        return string.Equals(leader.vowelharmony, follower.vowelharmony, System.StringComparison.OrdinalIgnoreCase)
+               || string.Equals(leader.firstlast, follower.firstlast, System.StringComparison.OrdinalIgnoreCase)
+               || string.Equals(leader.disharmonic, follower.disharmonic, System.StringComparison.OrdinalIgnoreCase);
+    }
+
+    private int CompareElements(int followerElement, int leaderElement) {
+        // element beats logic mirrors BoardContainer: Red > Green, Green > Blue, Blue > Red
+        if (followerElement == leaderElement) {
+            return 0;
+        }
+
+        var followerWins =
+            (followerElement == 0 && leaderElement == 2) ||
+            (followerElement == 2 && leaderElement == 1) ||
+            (followerElement == 1 && leaderElement == 0);
+
+        if (followerWins) {
+            return 1;
+        }
+
+        var leaderWins =
+            (leaderElement == 0 && followerElement == 2) ||
+            (leaderElement == 2 && followerElement == 1) ||
+            (leaderElement == 1 && followerElement == 0);
+
+        if (leaderWins) {
+            return -1;
+        }
+
+        return 0;
+    }
+}
+
+public enum AIDifficulty {
+    Easy,
+    Medium,
+    Hard
 }
